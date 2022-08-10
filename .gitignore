@@ -1,0 +1,3 @@
+daemon/*.o
+hass_pc_monitor/__pycache__
+.vscode
