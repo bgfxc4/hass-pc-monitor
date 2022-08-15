@@ -8,6 +8,9 @@ from datetime import timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator, UpdateFailed)
 
+import socket
+import json
+
 from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
@@ -33,6 +36,10 @@ class MonitorConnection(DataUpdateCoordinator):
         self.firmware_version = "0.0.1"
         self.model = "PC Monitor"
 
+
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_address = (host, port)
+
         super().__init__(
             hass,
             _LOGGER,
@@ -54,9 +61,20 @@ class MonitorConnection(DataUpdateCoordinator):
 
     async def test_connection(self) -> bool:
         """Test connectivity to the Dummy hub is OK."""
-        await asyncio.sleep(1)
-        return True
-
+        res = False
+        try:
+            self.sock.connect(self.server_address)
+            message = {
+                "token": "auth",
+                "password": self._password
+            }
+            self.sock.sendall(bytes(json.dumps(message), encoding="utf-8"))
+            res = json.loads(self.sock.recv(1048))
+        except Exception as e:
+            return False
+        finally:
+            self.sock.close()
+            return res
 
     @property
     def power_state(self) -> bool:

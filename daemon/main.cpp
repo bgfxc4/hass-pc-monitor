@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -6,6 +7,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string>
+#include "json.hpp"
 
 #define PORT 5573
 
@@ -16,21 +18,27 @@ void error(const char *msg) {
 
 void handleMsg(std::string msg, int sockfd) {
 	int n;
-	std::string token = msg.substr(0, msg.find(' '));
+	std::cout << msg << std::endl;
+	nlohmann::json jsonMsg = nlohmann::json::parse(msg);
+	std::string token = jsonMsg["token"];
 
-	std::string response = "";
-	if (token == "AUTH") {
-		std::string password = msg.substr(5, msg.length()-5);
+	nlohmann::json response;
+	if (token == "auth") {
+		std::string password = jsonMsg["password"];
 		if (password == "TestPassword") {
-			response = "OK";
+			response["msg"] = "OK";
+			response["status"] = 200;
 		} else {
-			response = "ERROR Wrong password";
+			response["msg"] = "ERROR Wrong password";
+			response["status"] = 401;
 		}
 	} else {
-		response = "ERROR Wrong token";
+		response["msg"] = "ERROR Wrong token";
+		response["status"] = 400;
 	}
 
-	n = write(sockfd, response.c_str(), response.length());
+	std::string responseStr = response.dump();
+	n = write(sockfd, responseStr.c_str(), responseStr.length());
 	if (n < 0) 
 		error("ERROR writing to socket");
 }

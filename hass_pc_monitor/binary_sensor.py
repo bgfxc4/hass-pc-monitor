@@ -3,6 +3,7 @@ from homeassistant.const import (
     DEVICE_CLASS_POWER
 )
 from homeassistant.components.binary_sensor import BinarySensorEntity
+
 import logging
 
 from .const import DOMAIN
@@ -18,7 +19,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     new_devices.append(PowerStateSensor(connection))
     async_add_entities(new_devices)
 
-class PowerStateSensor(BinarySensorEntity, BaseEntity):
+class PowerStateSensor(BaseEntity, BinarySensorEntity):
     """Representation of a Sensor."""
     device_class = DEVICE_CLASS_POWER
 
@@ -32,5 +33,5 @@ class PowerStateSensor(BinarySensorEntity, BaseEntity):
         self._attr_name = f"{self._connection.name} Power State"
     
     @property
-    def state(self):
+    def is_on(self):
         return self._connection.power_state

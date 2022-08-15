@@ -1,3 +1,4 @@
 daemon/*.o
+daemon/main
 hass_pc_monitor/__pycache__
 .vscode

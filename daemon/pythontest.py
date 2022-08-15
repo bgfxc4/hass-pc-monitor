@@ -10,7 +10,7 @@ sock.connect(server_address)
 try:
     
     # Send data
-    message = b'ATUH TestPassword'
+    message = 'ATUH TestPassword'
     print('sending ' + str(message))
     sock.sendall(message)
 

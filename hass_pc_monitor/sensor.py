@@ -19,7 +19,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     new_devices = []
     new_devices.append(CPULoadSensor(connection))
-    new_devices.append(TestLoadSensor(connection))
     async_add_entities(new_devices)
 
 
@@ -47,28 +46,3 @@ class CPULoadSensor(BaseEntity, SensorEntity):
     def state(self):
         """Return the state of the sensor."""
         return self._connection.cpu_load
-
-class TestLoadSensor(BaseEntity, SensorEntity):
-    """Representation of a Sensor."""
-
-    device_class = DEVICE_CLASS_POWER_FACTOR
-    unit_of_measurement = PERCENTAGE
-
-    def __init__(self, connection):
-        """Initialize the sensor."""
-        super().__init__(connection)
-
-        # As per the sensor, this must be a unique value within this domain. This is done
-        # by using the device ID, and appending "_battery"
-        self._attr_unique_id = f"{self._connection.connection_id}_test"
-
-        # The name of the entity
-        self._attr_name = f"{self._connection.name} Test"
-
-        self._state = self._connection.cpu_load
-
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return 15
