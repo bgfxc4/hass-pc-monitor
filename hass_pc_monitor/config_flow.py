@@ -20,17 +20,16 @@ DATA_SCHEMA = vol.Schema({("host"): str, ("port"): int, ("password"): str})
 async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     connection = MonitorConnection(hass, data["host"], data["port"], data["password"])
-    # The dummy hub provides a `test_connection` method to ensure it's working
-    # as expected
+
     result = await connection.test_connection()
+    print(result)
     if not result:
-        # If there is an error, raise an exception to notify HA that there was a
-        # problem. The UI will also show there was a problem
         raise CannotConnect
 
     if result["status"] == 401:
         raise InvalidAuth
-
+    if result["status"] != 200:
+        raise Exception
     return {"title": data["host"]}
 
 
@@ -62,6 +61,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except KeyError:
+                errors["base"] = "incomplete_form"
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -78,3 +79,5 @@ class CannotConnect(exceptions.HomeAssistantError):
 class InvalidAuth(exceptions.HomeAssistantError):
     """Error to indicate there is an invalid hostname."""
 
+class UnknownError(exceptions.HomeAssistantError):
+    """Error to indicate there is an invalid hostname."""

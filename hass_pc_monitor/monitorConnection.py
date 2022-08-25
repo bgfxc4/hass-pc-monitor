@@ -30,14 +30,12 @@ class MonitorConnection(DataUpdateCoordinator):
         self._id = (host+str(port)).lower()
         self.online = True
 
-        self._power_state = True
+        self._power_state = False
         self._cpu_load = 69
 
         self.firmware_version = "0.0.1"
         self.model = "PC Monitor"
 
-
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_address = (host, port)
 
         super().__init__(
@@ -48,11 +46,20 @@ class MonitorConnection(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            #print("API Call Device")
-            pass
-        except:
-            raise UpdateFailed("Error Talking to Device API")
+            sock.connect(self.server_address)
+            message = {
+                "token": "state",
+                "password": self._password
+            }
+            sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
+            res = json.loads(sock.recv(1048))
+            self._power_state = True
+        except Exception as e:
+            self._power_state = False
+        finally:
+            sock.close()
 
     @property
     def connection_id(self) -> str:
@@ -60,20 +67,21 @@ class MonitorConnection(DataUpdateCoordinator):
         return self._id
 
     async def test_connection(self) -> bool:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         """Test connectivity to the Dummy hub is OK."""
         res = False
         try:
-            self.sock.connect(self.server_address)
+            sock.connect(self.server_address)
             message = {
                 "token": "auth",
                 "password": self._password
             }
-            self.sock.sendall(bytes(json.dumps(message), encoding="utf-8"))
-            res = json.loads(self.sock.recv(1048))
+            sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
+            res = json.loads(sock.recv(1048))
         except Exception as e:
             return False
         finally:
-            self.sock.close()
+            sock.close()
             return res
 
     @property

@@ -1,4 +1,5 @@
-daemon/*.o
-daemon/main
+daemon_cpp/*.o
+daemon_cpp/main
+daemon/target
 hass_pc_monitor/__pycache__
 .vscode

@@ -6,6 +6,7 @@
         "error": {
             "cannot_connect": "Can't connect to the hostname and port you provided!",
             "invalid_auth": "Wrong password!",
+            "incomplete_form": "You need to fill out all fields!",
             "unknown": "Unknown error!"
         },
         "step": {
