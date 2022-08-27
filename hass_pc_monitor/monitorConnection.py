@@ -18,6 +18,13 @@ class MonitorConnection(DataUpdateCoordinator):
     """Dummy hub for Hello World example."""
 
     manufacturer = "bgfxc4"
+    online = True
+    _power_state = False
+    firmware_version = "0.0.1"
+    model = "PC Monitor"
+
+    cpu_list = {}
+    average_cpu_load = 0
 
     def __init__(self, hass: HomeAssistant, host: str, port: int, password: str) -> None:
         """Init dummy hub."""
@@ -28,13 +35,6 @@ class MonitorConnection(DataUpdateCoordinator):
         self._port = port
         self._password = password
         self._id = (host+str(port)).lower()
-        self.online = True
-
-        self._power_state = False
-        self._cpu_load = 69
-
-        self.firmware_version = "0.0.1"
-        self.model = "PC Monitor"
 
         self.server_address = (host, port)
 
@@ -46,7 +46,11 @@ class MonitorConnection(DataUpdateCoordinator):
         )
 
     async def _async_update_data(self):
+        await self.get_state_from_device()
+
+    async def get_state_from_device(self) -> bool:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        res = False
         try:
             sock.connect(self.server_address)
             message = {
@@ -55,34 +59,22 @@ class MonitorConnection(DataUpdateCoordinator):
             }
             sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
             res = json.loads(sock.recv(1048))
+
             self._power_state = True
+            self.cpu_list = res["data"]["state"]["cpu"]["cores"]
+            self.average_cpu_load = res["data"]["state"]["cpu"]["average"]
         except Exception as e:
+            print(e)
             self._power_state = False
+            return False
         finally:
             sock.close()
+            return res
 
     @property
     def connection_id(self) -> str:
         """ID for dummy hub."""
         return self._id
-
-    async def test_connection(self) -> bool:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        """Test connectivity to the Dummy hub is OK."""
-        res = False
-        try:
-            sock.connect(self.server_address)
-            message = {
-                "token": "auth",
-                "password": self._password
-            }
-            sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
-            res = json.loads(sock.recv(1048))
-        except Exception as e:
-            return False
-        finally:
-            sock.close()
-            return res
 
     @property
     def power_state(self) -> bool:

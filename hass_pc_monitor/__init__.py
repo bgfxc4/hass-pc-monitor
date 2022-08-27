@@ -9,15 +9,16 @@ from .const import DOMAIN
 
 # List of platforms to support. There should be a matching .py file for each,
 # eg <cover.py> and <sensor.py>
-PLATFORMS: list[str] = ["binary_sensor"]
+PLATFORMS: list[str] = ["binary_sensor", "sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    print("setup entry")
     """Set up Hello World from a config entry."""
     # Store an instance of the "connecting" class that does the work of speaking
     # with your actual devices.
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = MonitorConnection(hass, entry.data["host"], entry.data["port"], entry.data["password"])
-
+    await hass.data[DOMAIN][entry.entry_id].get_state_from_device()
     # This creates each HA object for each platform your device requires.
     # It's done by calling the `async_setup_entry` function in each platform module.
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)

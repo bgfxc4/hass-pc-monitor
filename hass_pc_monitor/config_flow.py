@@ -21,8 +21,7 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
     connection = MonitorConnection(hass, data["host"], data["port"], data["password"])
 
-    result = await connection.test_connection()
-    print(result)
+    result = await connection.get_state_from_device()
     if not result:
         raise CannotConnect
 

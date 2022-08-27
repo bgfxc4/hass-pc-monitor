@@ -30,27 +30,11 @@ fn handle_connection(mut stream: TcpStream, system: &mut sysinfo::System) {
     let msg_json = json::parse(msg.as_str()).unwrap();
 
     let res: json::JsonValue = match &msg_json["token"].as_str() {
-            Some("auth") => handle_auth(&msg_json, system),
             Some("state") => handle_state(&msg_json, system),
             Some(_) => handle_wrong_token(),
             None => handle_wrong_token()
     };
     stream.write_all(res.dump().as_bytes()).unwrap();
-}
-
-fn handle_auth(msg: &json::JsonValue, system: &mut sysinfo::System) -> json::JsonValue {
-    let mut res = json::object!{
-        status: 200,
-        msg: "OK"
-    };
-    let is_auth = test_auth(msg["password"].as_str());
-    if !is_auth {
-        res["status"] = 401.into();
-        res["msg"] = "ERROR Wrong password".into();
-        return res;
-    }
-    res["info"] = device_info::get_device_info(system);
-    res
 }
 
 fn handle_state(msg: &json::JsonValue, system: &mut sysinfo::System) -> json::JsonValue {
@@ -63,7 +47,7 @@ fn handle_state(msg: &json::JsonValue, system: &mut sysinfo::System) -> json::Js
     }
     res["status"] = 200.into();
     system.refresh_all();
-    res["msg"] = json::object!{
+    res["data"] = json::object!{
         info: device_info::get_device_info(system),
         state: device_state::get_device_state(system)
     };
