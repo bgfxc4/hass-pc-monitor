@@ -8,15 +8,15 @@ import logging
 
 from .const import DOMAIN
 from .entity import BaseEntity
-
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    print("sensor setup entry")
+async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     connection = hass.data[DOMAIN][config_entry.entry_id]
+    connection.sensorConfigEntry = config_entry
 
     new_devices = []
     for cpu in connection.cpu_list.keys():

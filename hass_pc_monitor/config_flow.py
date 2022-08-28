@@ -12,6 +12,8 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN  # pylint:disable=unused-import
 from .monitorConnection import MonitorConnection
 
+import hashlib
+
 _LOGGER = logging.getLogger(__name__)
 
 DATA_SCHEMA = vol.Schema({("host"): str, ("port"): int, ("password"): str})
@@ -19,6 +21,8 @@ DATA_SCHEMA = vol.Schema({("host"): str, ("port"): int, ("password"): str})
 
 async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
+    h = hashlib.new("sha512", data["password"].encode('utf-8'))
+    data["password"] = h.hexdigest()
     connection = MonitorConnection(hass, data["host"], data["port"], data["password"])
 
     result = await connection.get_state_from_device()
@@ -29,27 +33,17 @@ async def validate_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
         raise InvalidAuth
     if result["status"] != 200:
         raise Exception
-    return {"title": data["host"]}
+    return {"title": connection.name}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Hello World."""
 
     VERSION = 1
-    # Pick one of the available connection classes in homeassistant/config_entries.py
-    # This tells HA if it should be asking for updates, or it'll be notified of updates
-    # automatically. This example uses PUSH, as the dummy hub will notify HA of
-    # changes.
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_PUSH
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
-        # This goes through the steps to take the user through the setup process.
-        # Using this it is possible to update the UI and prompt for additional
-        # information. This example provides a single form (built from `DATA_SCHEMA`),
-        # and when that has some validated input, it calls `async_create_entry` to
-        # actually create the HA config entry. Note the "title" value is returned by
-        # `validate_input` above.
         errors = {}
         if user_input is not None:
             try:

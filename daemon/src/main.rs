@@ -4,13 +4,14 @@ use std::{
 };
 use sysinfo::SystemExt;
 use json;
+use sha2::{Sha512, Digest};
 
 pub mod device_info;
 pub mod device_state;
 
 fn main() {
     let listener = TcpListener::bind("0.0.0.0:5573").unwrap();
-    let mut system = sysinfo::System::new();
+    let mut system = sysinfo::System::new_all();
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
@@ -62,5 +63,16 @@ fn handle_wrong_token() -> json::JsonValue {
 }
 
 fn test_auth(pass: Option<&str>) -> bool {
-    pass == Some("TestPassword")
+    let hash = match pass {
+        Some(p) => get_sha512(p),
+        None => String::from("")
+    };
+    hash == get_sha512(get_sha512("TestPassword").as_str())
+}
+
+fn get_sha512(input: &str) -> String {
+    let mut hasher = Sha512::new();
+    hasher.update(input);
+    let result = hasher.finalize();
+    format!("{:x}", result)
 }
