@@ -46,7 +46,10 @@ class CPULoadSensor(BaseEntity, SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return round(self._connection.cpu_list[self._cpu_name])
+        if (self._connection.power_state):
+            return round(self._connection.cpu_list[self._cpu_name])
+        else:
+            return None
 
 
 class AverageCPULoadSensor(BaseEntity, SensorEntity):
@@ -68,4 +71,7 @@ class AverageCPULoadSensor(BaseEntity, SensorEntity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        return round(self._connection.average_cpu_load)
+        if (self._connection.power_state):
+            return round(self._connection.average_cpu_load)
+        else:
+            return None

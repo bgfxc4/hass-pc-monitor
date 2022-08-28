@@ -80,7 +80,6 @@ class MonitorConnection(DataUpdateCoordinator):
             self.name = f'{res["data"]["info"]["system_name"]}'
             self.model = f'{res["data"]["info"]["system_name"]}'
         except Exception as e:
-            print("Exception:" + e)
             self._power_state = False
             return False
         finally:
