@@ -30,4 +30,4 @@ class BaseEntity(CoordinatorEntity):
 
     @property
     def available(self) -> bool:
-        return self._connection.online
+        return self._connection.power_state

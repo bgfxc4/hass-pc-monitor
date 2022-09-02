@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import (DataUpdateCoordinator, UpdateFailed)
 
-import asyncio
 import collections
 import socket
 import json
@@ -20,7 +19,6 @@ class MonitorConnection(DataUpdateCoordinator):
     """Dummy hub for Hello World example."""
 
     manufacturer = "bgfxc4"
-    online = True
     _power_state = False
     firmware_version = "N/A"
     model = "N/A"
@@ -56,6 +54,7 @@ class MonitorConnection(DataUpdateCoordinator):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         res = False
         try:
+            sock.settimeout(1)
             sock.connect(self.server_address)
             message = {
                 "token": "state",
@@ -64,27 +63,39 @@ class MonitorConnection(DataUpdateCoordinator):
             sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
             res = json.loads(sock.recv(1048))
             self._power_state = True
-            if (collections.Counter(self.cpu_list.keys()) != collections.Counter(res["data"]["state"]["cpu"]["cores"].keys())) and self.sensorConfigEntry != None:
-                await self._hass.config_entries.async_forward_entry_unload(
-                    self.sensorConfigEntry, "sensor"
-                )
-                self.cpu_list = res["data"]["state"]["cpu"]["cores"]
-                await self._hass.config_entries.async_forward_entry_setup(
-                    self.sensorConfigEntry, "sensor"
-                )
-            else:
-                self.cpu_list = res["data"]["state"]["cpu"]["cores"]
+            
+            await self.set_cpu_data(res["data"])
 
-            self.average_cpu_load = res["data"]["state"]["cpu"]["average"]
+            self.update_interval = timedelta(seconds=int(res["data"]["settings"]["update_interval"]))
+
             self.firmware_version = f'{res["data"]["info"]["kernel_version"]} {res["data"]["info"]["os_version"]}'
             self.name = f'{res["data"]["info"]["system_name"]}'
             self.model = f'{res["data"]["info"]["system_name"]}'
+        except (ConnectionRefusedError, TimeoutError):
+            self._power_state = False
+            return False
         except Exception as e:
+            _LOGGER.exception(e)
             self._power_state = False
             return False
         finally:
             sock.close()
             return res
+    
+    async def set_cpu_data(self, data):
+        if (collections.Counter(self.cpu_list.keys()) != collections.Counter(data["state"]["cpu"]["cores"].keys())) and self.sensorConfigEntry != None: # if list of cpu cores changed, update sensor platform to load new sensors
+            await self._hass.config_entries.async_forward_entry_unload(
+                self.sensorConfigEntry, "sensor"
+            )
+            self.cpu_list = data["state"]["cpu"]["cores"]
+            await self._hass.config_entries.async_forward_entry_setup(
+                self.sensorConfigEntry, "sensor"
+            )
+        else:
+            self.cpu_list = data["state"]["cpu"]["cores"]
+
+        self.average_cpu_load = data["state"]["cpu"]["average"]
+        return
 
     @property
     def connection_id(self) -> str:

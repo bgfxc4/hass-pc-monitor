@@ -22,7 +22,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class PowerStateSensor(BaseEntity, BinarySensorEntity):
     """Representation of a Sensor."""
     device_class = DEVICE_CLASS_POWER
-
+    available = True
     def __init__(self, connection):
         """Initialize the sensor."""
         super().__init__(connection)
