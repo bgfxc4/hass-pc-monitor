@@ -2,7 +2,7 @@
 
 from homeassistant.const import (
     PERCENTAGE,
-    DEVICE_CLASS_POWER_FACTOR
+    DATA_GIBIBYTES
 )
 import logging
 
@@ -23,13 +23,16 @@ async def async_setup_entry(hass, config_entry: ConfigEntry, async_add_entities)
         new_devices.append(CPULoadSensor(connection, cpu))
 
     new_devices.append(AverageCPULoadSensor(connection))
+    new_devices.append(MemoryTotalSensor(connection, MemoryType.MEMORY))
+    new_devices.append(MemoryUsedSensor(connection, MemoryType.MEMORY))
+    new_devices.append(MemoryTotalSensor(connection, MemoryType.SWAP))
+    new_devices.append(MemoryUsedSensor(connection, MemoryType.SWAP))
     async_add_entities(new_devices)
 
 
 class CPULoadSensor(BaseEntity, SensorEntity):
     """Representation of a Sensor."""
 
-    device_class = DEVICE_CLASS_POWER_FACTOR
     unit_of_measurement = PERCENTAGE
     icon = "mdi:cpu-64-bit"
 
@@ -55,7 +58,6 @@ class CPULoadSensor(BaseEntity, SensorEntity):
 class AverageCPULoadSensor(BaseEntity, SensorEntity):
     """Representation of a Sensor."""
 
-    device_class = DEVICE_CLASS_POWER_FACTOR
     unit_of_measurement = PERCENTAGE
     icon = "mdi:cpu-64-bit"
 
@@ -73,5 +75,55 @@ class AverageCPULoadSensor(BaseEntity, SensorEntity):
         """Return the state of the sensor."""
         if (self._connection.power_state):
             return round(self._connection.average_cpu_load)
+        else:
+            return None
+
+class MemoryType():
+    SWAP = "Swap"
+    MEMORY = "Memory"
+
+class MemoryTotalSensor(BaseEntity, SensorEntity):
+    """Representation of a Sensor."""
+
+    unit_of_measurement = DATA_GIBIBYTES
+    icon = "mdi:memory"
+
+    def __init__(self, connection, memoryType):
+        """Initialize the sensor."""
+        super().__init__(connection)
+        self.memoryType = memoryType
+        self._attr_unique_id = f"{self._connection.connection_id}_{memoryType.lower()}_total"
+
+        self._attr_name = f"{self._connection.name} {memoryType} Total"
+
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        if (self._connection.power_state):
+            return self._connection.memory[self.memoryType.lower()]["total"]
+        else:
+            return None
+
+class MemoryUsedSensor(BaseEntity, SensorEntity):
+    """Representation of a Sensor."""
+
+    unit_of_measurement = PERCENTAGE
+    icon = "mdi:memory"
+
+    def __init__(self, connection, memoryType):
+        """Initialize the sensor."""
+        super().__init__(connection)
+        self.memoryType = memoryType
+        self._attr_unique_id = f"{self._connection.connection_id}_{memoryType.lower()}_used"
+
+        self._attr_name = f"{self._connection.name} {memoryType} Used"
+
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        if (self._connection.power_state):
+            return self._connection.memory[self.memoryType.lower()]["used"]
         else:
             return None

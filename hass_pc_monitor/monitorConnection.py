@@ -27,6 +27,11 @@ class MonitorConnection(DataUpdateCoordinator):
     cpu_list = {}
     average_cpu_load = 0
 
+    memory = {
+        "memory": {"total": 0, "used": 0},
+        "swap": {"total": 0, "used": 0}
+    }
+
     isFirstDataLoad = True
     sensorConfigEntry: ConfigEntry = None
 
@@ -64,14 +69,14 @@ class MonitorConnection(DataUpdateCoordinator):
             res = json.loads(sock.recv(1048))
             self._power_state = True
             
-            await self.set_cpu_data(res["data"])
+            await self.update_sensor_platform_and_data(res["data"])
 
             self.update_interval = timedelta(seconds=int(res["data"]["settings"]["update_interval"]))
 
             self.firmware_version = f'{res["data"]["info"]["kernel_version"]} {res["data"]["info"]["os_version"]}'
             self.name = f'{res["data"]["info"]["system_name"]}'
             self.model = f'{res["data"]["info"]["system_name"]}'
-        except (ConnectionRefusedError, TimeoutError):
+        except (ConnectionRefusedError, TimeoutError, socket.timeout):
             self._power_state = False
             return False
         except Exception as e:
@@ -82,20 +87,33 @@ class MonitorConnection(DataUpdateCoordinator):
             sock.close()
             return res
     
-    async def set_cpu_data(self, data):
-        if (collections.Counter(self.cpu_list.keys()) != collections.Counter(data["state"]["cpu"]["cores"].keys())) and self.sensorConfigEntry != None: # if list of cpu cores changed, update sensor platform to load new sensors
-            await self._hass.config_entries.async_forward_entry_unload(
+    async def update_sensor_platform_and_data(self, data):
+        self.set_memory_data(data)
+        cpu_change = self.set_cpu_data(data)
+        if  cpu_change:
+            await self._hass.config_entries.async_forward_entry_unload( # reload sensor platform to reload new sensors if one if the datapoints has changed
                 self.sensorConfigEntry, "sensor"
             )
             self.cpu_list = data["state"]["cpu"]["cores"]
             await self._hass.config_entries.async_forward_entry_setup(
                 self.sensorConfigEntry, "sensor"
             )
+
+    def set_cpu_data(self, data):
+        ret = False
+        if (collections.Counter(self.cpu_list.keys()) != collections.Counter(data["state"]["cpu"]["cores"].keys())) and self.sensorConfigEntry != None: # if list of cpu cores changed, update sensor platform to load new sensors
+            ret = True
         else:
             self.cpu_list = data["state"]["cpu"]["cores"]
 
         self.average_cpu_load = data["state"]["cpu"]["average"]
-        return
+        return ret
+
+    def set_memory_data(self, data):
+        self.memory["memory"]["total"] = "{:.1f}".format(float(data["info"]["total_memory"]) / (2**20))
+        self.memory["swap"]["total"] = "{:.1f}".format(float(data["info"]["total_swap"]) / (2**20))
+        self.memory["memory"]["used"] = round((float(data["state"]["used_memory"]) / (2**20)) / float(self.memory["memory"]["total"]) * 100)
+        self.memory["swap"]["used"] = round((float(data["state"]["used_swap"]) / (2**20)) / float(self.memory["swap"]["total"]) * 100)
 
     @property
     def connection_id(self) -> str:
