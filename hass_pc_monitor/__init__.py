@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from .monitorConnection import MonitorConnection
 from .const import DOMAIN
 
-PLATFORMS: list[str] = ["binary_sensor", "sensor"]
+PLATFORMS: list[str] = ["binary_sensor", "sensor", "button"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

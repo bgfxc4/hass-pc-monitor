@@ -1,4 +1,11 @@
 {
     "port": 5573,
-    "update_interval": 30
+    "update_interval": 30,
+    "commands": {
+        "test_notify": {
+            "display_name": "Test notification",
+            "command": "notify-send",
+            "args": ["asdasd1", "222asdad"]
+        }
+    }
 }

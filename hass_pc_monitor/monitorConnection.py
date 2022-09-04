@@ -27,13 +27,15 @@ class MonitorConnection(DataUpdateCoordinator):
     cpu_list = {}
     average_cpu_load = 0
 
+    command_list = {}
+
     memory = {
         "memory": {"total": 0, "used": 0},
         "swap": {"total": 0, "used": 0}
     }
 
     isFirstDataLoad = True
-    sensorConfigEntry: ConfigEntry = None
+    configEntry: ConfigEntry = None
 
     def __init__(self, hass: HomeAssistant, host: str, port: int, password: str) -> None:
         """Init dummy hub."""
@@ -70,6 +72,7 @@ class MonitorConnection(DataUpdateCoordinator):
             self._power_state = True
             
             await self.update_sensor_platform_and_data(res["data"])
+            await self.update_button_platform_and_data(res["data"])
 
             self.update_interval = timedelta(seconds=int(res["data"]["settings"]["update_interval"]))
 
@@ -90,21 +93,15 @@ class MonitorConnection(DataUpdateCoordinator):
     async def update_sensor_platform_and_data(self, data):
         self.set_memory_data(data)
         cpu_change = self.set_cpu_data(data)
-        if  cpu_change:
-            await self._hass.config_entries.async_forward_entry_unload( # reload sensor platform to reload new sensors if one if the datapoints has changed
-                self.sensorConfigEntry, "sensor"
-            )
-            self.cpu_list = data["state"]["cpu"]["cores"]
-            await self._hass.config_entries.async_forward_entry_setup(
-                self.sensorConfigEntry, "sensor"
-            )
+        if cpu_change:
+            #self.cpu_list = data["state"]["cpu"]["cores"]
+            await self.reload_config_entry("sensor")
 
     def set_cpu_data(self, data):
         ret = False
-        if (collections.Counter(self.cpu_list.keys()) != collections.Counter(data["state"]["cpu"]["cores"].keys())) and self.sensorConfigEntry != None: # if list of cpu cores changed, update sensor platform to load new sensors
+        if (collections.Counter(self.cpu_list.keys()) != collections.Counter(data["state"]["cpu"]["cores"].keys())) and self.configEntry != None: # if list of cpu cores changed, update sensor platform to load new sensors
             ret = True
-        else:
-            self.cpu_list = data["state"]["cpu"]["cores"]
+        self.cpu_list = data["state"]["cpu"]["cores"]
 
         self.average_cpu_load = data["state"]["cpu"]["average"]
         return ret
@@ -114,6 +111,54 @@ class MonitorConnection(DataUpdateCoordinator):
         self.memory["swap"]["total"] = "{:.1f}".format(float(data["info"]["total_swap"]) / (2**20))
         self.memory["memory"]["used"] = round((float(data["state"]["used_memory"]) / (2**20)) / float(self.memory["memory"]["total"]) * 100)
         self.memory["swap"]["used"] = round((float(data["state"]["used_swap"]) / (2**20)) / float(self.memory["swap"]["total"]) * 100)
+
+    async def update_button_platform_and_data(self, data):
+        command_change = self.set_command_data(data)
+        if command_change and self.configEntry != None:
+            #self.command_list = data["settings"]["commands"]
+            await self.reload_config_entry("button")
+    
+    def set_command_data(self, data):
+        ret = False
+        if len(data["settings"]["commands"].keys()) != len(self.command_list.keys()):
+            ret = True
+        else:
+            for c in data["settings"]["commands"]:# if list of commands changed, update button platform to load new buttons
+                if c not in self.command_list:
+                    ret = True
+                    break
+                new_c = data["settings"]["commands"][c]
+                old_c = self.command_list[c]
+                if (new_c["display_name"] != old_c.get("display_name", "") or new_c["args"] != old_c.get("args", "") or new_c["command"] != old_c.get("command", "")):
+                    ret = True
+                    break
+        self.command_list = data["settings"]["commands"]
+        return ret
+
+
+    async def reload_config_entry(self, platform_name):
+        await self._hass.config_entries.async_forward_entry_unload( # reload sensor platform to reload new sensors if one if the datapoints has changed
+            self.configEntry, platform_name
+        )
+        await self._hass.config_entries.async_forward_entry_setup(
+            self.configEntry, platform_name
+        )
+
+    def command_button_clicked(self, command_name):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.settimeout(1)
+            sock.connect(self.server_address)
+            message = {
+                "token": "exec_command",
+                "password": self._password,
+                "command_name": command_name
+            }
+            sock.sendall(bytes(json.dumps(message)+"\n\n", encoding="utf-8"))
+
+        except Exception as e:
+            _LOGGER.exception(e)
+            return False
 
     @property
     def connection_id(self) -> str:

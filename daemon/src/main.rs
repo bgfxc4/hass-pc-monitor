@@ -7,6 +7,7 @@ use json;
 use sha2::{Sha512, Digest};
 use std::fs::File;
 use std::io::Read;
+use std::process::Command;
 
 pub mod device_info;
 pub mod device_state;
@@ -45,6 +46,7 @@ fn handle_connection(mut stream: TcpStream, system: &mut sysinfo::System, config
 
     let res: json::JsonValue = match &msg_json["token"].as_str() {
             Some("state") => handle_state(&msg_json, system, config),
+            Some("exec_command") => handle_exec_command(&msg_json, config),
             Some(_) => handle_wrong_token(),
             None => handle_wrong_token()
     };
@@ -66,6 +68,20 @@ fn handle_state(msg: &json::JsonValue, system: &mut sysinfo::System, config: &js
         state: device_state::get_device_state(system),
         settings: device_settings::get_device_settings(config)
     };
+    res
+}
+
+fn handle_exec_command(msg: &json::JsonValue, config: &json::JsonValue) -> json::JsonValue {
+    let mut res = json::object!{};
+    let is_auth = test_auth(msg["password"].as_str());
+    if !is_auth {
+        res["status"] = 401.into();
+        res["msg"] = "ERROR Wrong password".into();
+        return res;
+    }
+    let command_conf = config["commands"][msg["command_name"].as_str().unwrap_or("")].clone();
+    let _ = Command::new(command_conf["command"].as_str().unwrap_or("")).args(command_conf["args"].members().map(|val| val.as_str().unwrap_or(""))).spawn();
+    res["status"] = 200.into();
     res
 }
 
