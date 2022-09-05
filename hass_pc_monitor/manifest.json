@@ -1,6 +1,6 @@
 {
   "domain": "hass_pc_monitor",
-  "name": "Example for PC Monitor",
+  "name": "PC Monitor",
   "config_flow": true,
   "documentation": "https://github.com/bgfxc4/hass-pc-monitor",
   "requirements": [],
