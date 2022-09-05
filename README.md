@@ -62,3 +62,25 @@ The config.json file should contain something similar to the following.
     }
 }
 ```
+
+## Systemd service
+
+To really use this system, the daemon has to be running at all times. On Linux you can use an own Systemd service to achieve that.
+Just create the file `/etc/systemd/system/hass-pc-monitor.service` with the content
+```
+Description=Daemon to send data to the Home Assistant integration
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=YourUserName
+ExecStart=/the/path/to/your/daemon/executable
+
+[Install]
+WantedBy=multi-user.target
+```
+Now you can execute `sudo systemctl start hass-pc-monitor` to start the service and `sudo systemctl status hass-pc-monitor` to get the status of the service.
+
+If you want the service to be run on system startup, execute `sudo systemctl enable hass-pc-monitor`.
