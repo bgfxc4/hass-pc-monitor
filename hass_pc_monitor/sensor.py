@@ -35,6 +35,7 @@ class CPULoadSensor(BaseEntity, SensorEntity):
 
     unit_of_measurement = PERCENTAGE
     icon = "mdi:cpu-64-bit"
+    state_class = "measurement"
 
     def __init__(self, connection, cpu_name):
         """Initialize the sensor."""
@@ -60,6 +61,7 @@ class AverageCPULoadSensor(BaseEntity, SensorEntity):
 
     unit_of_measurement = PERCENTAGE
     icon = "mdi:cpu-64-bit"
+    state_class = "measurement"
 
     def __init__(self, connection):
         """Initialize the sensor."""
@@ -87,6 +89,7 @@ class MemoryTotalSensor(BaseEntity, SensorEntity):
 
     unit_of_measurement = DATA_GIBIBYTES
     icon = "mdi:memory"
+    state_class = "total"
 
     def __init__(self, connection, memoryType):
         """Initialize the sensor."""
@@ -110,6 +113,7 @@ class MemoryUsedSensor(BaseEntity, SensorEntity):
 
     unit_of_measurement = PERCENTAGE
     icon = "mdi:memory"
+    state_class = "measurement"
 
     def __init__(self, connection, memoryType):
         """Initialize the sensor."""

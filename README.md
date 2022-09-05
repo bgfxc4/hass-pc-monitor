@@ -43,3 +43,22 @@ Make sure that the daemon is running on the machine, that is to be monitored and
 If evering went ok, you should now be prompted with a success message. You can select the area you want your machine to be in and click `Finish`.
 
 For any occuring issues, don't hesitate and open an issue on GitHub.
+
+## Config
+
+To configure the daemon on the machine, you have to create the file `$HOME/.config/hass-pc-monitor/config.json` on Linux, `C:\Users\USER\AppData\Roaming\hass-pc-monitor\config.json` on Windows or `$/Users/USER/Library/Application Support/hass-pc-monitor/config.json` on Mac.
+
+The config.json file should contain something similar to the following.
+```
+{
+    "port": 5573,   # The port your daemon should run on
+    "update_interval": 30,  # After how many seconds the data should be fetched
+    "commands": {   # List of predefined commands, that can be executed by Home Assistant
+        "test_notify": {    # Example definition of a command. The key ("test_notify") is the identifier of the command. It should not be used twice
+            "display_name": "Test notification",    # The name that is displayed in Home Assistant
+            "command": "notify-send",   # The executable that should be executed (Without parameters!)
+            "args": ["asdasd1", "222asdad"] # List of parameters for the command
+        }
+    }
+}
+```

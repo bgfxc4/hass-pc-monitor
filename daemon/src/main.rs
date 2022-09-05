@@ -8,6 +8,8 @@ use sha2::{Sha512, Digest};
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
+use dirs;
+use std::path::PathBuf;
 
 pub mod device_info;
 pub mod device_state;
@@ -28,7 +30,9 @@ fn main() {
 }
 
 fn read_config(out: &mut json::JsonValue) {
-    let mut file = File::open("config.json").unwrap();
+    let mut path = dirs::config_dir().unwrap_or(PathBuf::new());
+    path.push("hass-pc-monitor/config.json");
+    let mut file = File::open(path).unwrap();
     let mut out_string = String::new();
     file.read_to_string(&mut out_string).unwrap();
     *out = json::parse(out_string.as_str()).unwrap();
